@@ -1,0 +1,70 @@
+name: DEV Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy-dev:
+    runs-on: ubuntu-latest
+
+    steps:
+    # ---------------- CHECKOUT ----------------
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # ---------------- SSH SETUP ----------------
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+    # ---------------- FRONTEND BUILD (VITE) ----------------
+    - name: Build React Frontend
+      working-directory: frontend
+      run: |
+        npm install
+        npm run build
+
+    # ---------------- DEPLOY FRONTEND (DIST CONTENT ONLY) ----------------
+    - name: Deploy Frontend to DEV EC2
+      run: |
+        rsync -avz --delete \
+          --exclude='.git' \
+          --exclude='node_modules' \
+          frontend/dist/ \
+          ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ec2-user/intern-league2/team1/frontend/
+
+    # ---------------- DEPLOY BACKEND ----------------
+    - name: Deploy Backend to DEV EC2
+      run: |
+        rsync -avz --delete \
+          --exclude='.git' \
+          --exclude='__pycache__' \
+          --exclude='venv' \
+          backend/ \
+          ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ec2-user/intern-league2/team1/backend/
+
+    # ---------------- BACKEND SETUP & RESTART ----------------
+    - name: Restart Django Backend Service
+      run: |
+        ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          cd /home/ec2-user/intern-league2/team1/backend
+
+          if [ ! -d "venv" ]; then
+            python3 -m venv venv
+          fi
+
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+          python manage.py migrate
+          python manage.py collectstatic --noinput
+
+          sudo systemctl restart team1-backend.service
+          sudo systemctl status team1-backend.service --no-pager
+        EOF
