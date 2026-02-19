@@ -55,7 +55,7 @@ jobs:
           cd /home/ec2-user/intern-league2/team12/backend
 
           if [ ! -d "venv" ]; then
-            python3 -m venv venv
+            python3.11 -m venv venv
           fi
 
           source venv/bin/activate
