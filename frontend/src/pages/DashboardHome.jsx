@@ -1,128 +1,146 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
+import { apiGetEmployees, apiGetCompliance } from '../api/employeeApi';
 
 function DashboardHome() {
+    const { token } = useAuth();
+    const navigate = useNavigate();
+    const [employees, setEmployees] = useState([]);
+    const [compliance, setCompliance] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        async function fetchData() {
+            try {
+                const [empRes, compRes] = await Promise.all([
+                    apiGetEmployees({ token }),
+                    apiGetCompliance({ token })
+                ]);
+                setEmployees(empRes.employees || []);
+                setCompliance(compRes.compliance_records || []);
+            } catch (err) {
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        }
+        if (token) fetchData();
+    }, [token]);
+
+    const totalHeadcount = employees.length;
+    const compliancePending = compliance.filter(c => c.status && c.status.toLowerCase() !== 'verified' && c.status.toLowerCase() !== 'completed').length;
+    const complianceVerified = compliance.filter(c => c.status && (c.status.toLowerCase() === 'verified' || c.status.toLowerCase() === 'completed')).length;
+
+    if (loading) {
+        return (
+            <div className="dashboard-content">
+                <div className="header"><h1>HR Dashboard</h1></div>
+                <p>Loading data from database...</p>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="dashboard-content">
+                <div className="header"><h1>HR Dashboard</h1></div>
+                <p style={{ color: 'red' }}>Error: {error}</p>
+            </div>
+        );
+    }
+
     return (
         <div className="dashboard-content">
             <div className="header">
                 <h1>HR Dashboard</h1>
-                <button className="btn">Add Employee</button>
+                <button className="btn" onClick={() => navigate('/dashboard/add-employee')}>Add Employee</button>
             </div>
 
-            {/* Top Cards */}
+            {/* Top Cards — real counts from DB */}
             <div className="card-container">
                 <div className="card">
                     <h3>Total Headcount</h3>
-                    <p>245 Employees</p>
+                    <p>{totalHeadcount} Employees</p>
                 </div>
 
                 <div className="card">
-                    <h3>Pending Verifications</h3>
-                    <p>12 Documents</p>
+                    <h3>Pending Compliance</h3>
+                    <p>{compliancePending} Records</p>
                 </div>
 
                 <div className="card">
-                    <h3>Expiring in 30 Days</h3>
-                    <p>7 Documents</p>
+                    <h3>Verified / Completed</h3>
+                    <p>{complianceVerified} Records</p>
                 </div>
 
                 <div className="card">
-                    <h3>This Month Joiners</h3>
-                    <p>9 Employees</p>
+                    <h3>Total Compliance</h3>
+                    <p>{compliance.length} Records</p>
                 </div>
             </div>
 
-            {/* Onboarding Table */}
+            {/* Employee Table — data from emp_master */}
             <div className="table-container">
-                <h3>Onboarding Checklist</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Employee</th>
-                            <th>Role</th>
-                            <th>Checklist Status</th>
-                            <th>Docs Uploaded</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Rahul Kumar</td>
-                            <td>Software Engineer</td>
-                            <td><span className="status orange">In Progress</span></td>
-                            <td>4 / 6</td>
-                        </tr>
-                        <tr>
-                            <td>Anita Sharma</td>
-                            <td>HR Executive</td>
-                            <td><span className="status green">Completed</span></td>
-                            <td>6 / 6</td>
-                        </tr>
-                    </tbody>
-                </table>
+                <h3>Employee Directory</h3>
+                {employees.length === 0 ? (
+                    <p>No employees found in the database.</p>
+                ) : (
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Emp ID</th>
+                                <th>First Name</th>
+                                <th>Last Name</th>
+                                <th>Start Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {employees.map(emp => (
+                                <tr key={emp.emp_id}>
+                                    <td>{emp.emp_id}</td>
+                                    <td>{emp.first_name}</td>
+                                    <td>{emp.last_name}</td>
+                                    <td>{emp.start_date}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
             </div>
 
-            {/* Compliance Dashboard */}
+            {/* Compliance Table — data from emp_compliance_tracker */}
             <div className="table-container">
-                <h3>Compliance & Document Status</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Employee</th>
-                            <th>Document Type</th>
-                            <th>Status</th>
-                            <th>Expiry Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Rahul Kumar</td>
-                            <td>ID Proof</td>
-                            <td><span className="status green">Verified</span></td>
-                            <td>--</td>
-                        </tr>
-                        <tr>
-                            <td>Vikram Singh</td>
-                            <td>Work Permit</td>
-                            <td><span class="status red">Expiring Soon</span></td>
-                            <td>15 March 2026</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            {/* Reports Section */}
-            <div className="table-container">
-                <h3>Reports Overview</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Report Name</th>
-                            <th>Description</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Headcount Report</td>
-                            <td>Department / Location / Employment Type</td>
-                            <td><button className="btn">View</button></td>
-                        </tr>
-                        <tr>
-                            <td>Joiners & Leavers</td>
-                            <td>Monthly Tracking</td>
-                            <td><button class="btn">View</button></td>
-                        </tr>
-                        <tr>
-                            <td>CTC Distribution</td>
-                            <td>Salary Level Analysis</td>
-                            <td><button class="btn">View</button></td>
-                        </tr>
-                        <tr>
-                            <td>Compliance Status</td>
-                            <td>By Type / Status</td>
-                            <td><button class="btn">View</button></td>
-                        </tr>
-                    </tbody>
-                </table>
+                <h3>Compliance &amp; Document Status</h3>
+                {compliance.length === 0 ? (
+                    <p>No compliance records found in the database.</p>
+                ) : (
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Document Type</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {compliance.map(rec => (
+                                <tr key={rec.id}>
+                                    <td>{rec.employee}</td>
+                                    <td>{rec.type}</td>
+                                    <td>
+                                        <span className={`status ${rec.status?.toLowerCase() === 'verified' || rec.status?.toLowerCase() === 'completed' ? 'green' :
+                                                rec.status?.toLowerCase() === 'pending' ? 'orange' : 'red'
+                                            }`}>
+                                            {rec.status}
+                                        </span>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
             </div>
         </div>
     );

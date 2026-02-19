@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
-import './Dashboard.css'; // Reusing dashboard styles for consistency
+import { apiAddEmployee } from '../api/employeeApi';
+import './Dashboard.css';
 
 const AddEmployee = () => {
     const { token } = useAuth();
@@ -29,31 +30,17 @@ const AddEmployee = () => {
         setError(null);
 
         try {
-            const response = await fetch('/api/employees/add', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(formData)
+            const data = await apiAddEmployee({ token, employee: formData });
+            setMessage(`Success! Employee added with ID: ${data.emp_id}`);
+            setFormData({
+                first_name: '',
+                middle_name: '',
+                last_name: '',
+                start_date: '',
+                end_date: ''
             });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                setMessage(`Success! Employee added with ID: ${data.emp_id}`);
-                setFormData({
-                    first_name: '',
-                    middle_name: '',
-                    last_name: '',
-                    start_date: '',
-                    end_date: ''
-                });
-            } else {
-                setError(data.error || 'Failed to add employee');
-            }
         } catch (err) {
-            setError('Network error: ' + err.message);
+            setError(err.message || 'Failed to add employee');
         } finally {
             setLoading(false);
         }
@@ -63,8 +50,8 @@ const AddEmployee = () => {
         <div className="dashboard-content">
             <h1>Add New Employee</h1>
             <div className="card">
-                {message && <div style={{ color: 'green', marginBottom: '1rem' }}>{message}</div>}
-                {error && <div style={{ color: 'red', marginBottom: '1rem' }}>{error}</div>}
+                {message && <div style={{ color: '#27ae60', marginBottom: '1rem', fontWeight: 'bold' }}>{message}</div>}
+                {error && <div style={{ color: '#e74c3c', marginBottom: '1rem', fontWeight: 'bold' }}>{error}</div>}
 
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: '500px' }}>
                     <div className="form-group">
@@ -125,7 +112,7 @@ const AddEmployee = () => {
                         />
                     </div>
 
-                    <button type="submit" disabled={loading} className="btn-primary" style={{ marginTop: '1rem' }}>
+                    <button type="submit" disabled={loading} className="btn" style={{ marginTop: '1rem' }}>
                         {loading ? 'Adding...' : 'Add Employee'}
                     </button>
                 </form>

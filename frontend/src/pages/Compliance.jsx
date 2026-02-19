@@ -1,6 +1,48 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useAuth } from '../auth/AuthContext';
+import { apiGetCompliance } from '../api/employeeApi';
 
 function Compliance() {
+    const { token } = useAuth();
+    const [records, setRecords] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        async function fetchCompliance() {
+            try {
+                const res = await apiGetCompliance({ token });
+                setRecords(res.compliance_records || []);
+            } catch (err) {
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        }
+        if (token) fetchCompliance();
+    }, [token]);
+
+    const pending = records.filter(r => r.status && r.status.toLowerCase() !== 'verified' && r.status.toLowerCase() !== 'completed').length;
+    const verified = records.filter(r => r.status && (r.status.toLowerCase() === 'verified' || r.status.toLowerCase() === 'completed')).length;
+
+    if (loading) {
+        return (
+            <div className="dashboard-content">
+                <div className="header"><h1>Compliance Dashboard</h1></div>
+                <p>Loading compliance data from database...</p>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="dashboard-content">
+                <div className="header"><h1>Compliance Dashboard</h1></div>
+                <p style={{ color: 'red' }}>Error: {error}</p>
+            </div>
+        );
+    }
+
     return (
         <div className="dashboard-content">
             <div className="header">
@@ -9,48 +51,49 @@ function Compliance() {
 
             <div className="card-container">
                 <div className="card">
-                    <h3>Missing Documents</h3>
-                    <p className="text-red">5 Employees</p>
+                    <h3>Total Records</h3>
+                    <p>{records.length} Documents</p>
                 </div>
                 <div className="card">
-                    <h3>Expiring (30 Days)</h3>
-                    <p className="text-orange">3 Documents</p>
+                    <h3>Pending / In Progress</h3>
+                    <p className="text-orange">{pending} Documents</p>
                 </div>
                 <div className="card">
-                    <h3>Expiring (60 Days)</h3>
-                    <p>8 Documents</p>
+                    <h3>Verified / Completed</h3>
+                    <p className="text-green">{verified} Documents</p>
                 </div>
             </div>
 
             <div className="table-container">
                 <h3>Document Status</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Employee</th>
-                            <th>Document</th>
-                            <th>Status</th>
-                            <th>Expiry Date</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Vikram Singh</td>
-                            <td>Work Permit</td>
-                            <td><span className="status red">Expiring Soon</span></td>
-                            <td>2026-03-15</td>
-                            <td><button className="btn">Notify</button></td>
-                        </tr>
-                        <tr>
-                            <td>Anjali Rao</td>
-                            <td>Passport</td>
-                            <td><span className="status orange">Pending Review</span></td>
-                            <td>2028-06-12</td>
-                            <td><button className="btn">Verify</button></td>
-                        </tr>
-                    </tbody>
-                </table>
+                {records.length === 0 ? (
+                    <p>No compliance records found in the database.</p>
+                ) : (
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Document Type</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {records.map(rec => (
+                                <tr key={rec.id}>
+                                    <td>{rec.employee}</td>
+                                    <td>{rec.type}</td>
+                                    <td>
+                                        <span className={`status ${rec.status?.toLowerCase() === 'verified' || rec.status?.toLowerCase() === 'completed' ? 'green' :
+                                                rec.status?.toLowerCase() === 'pending' ? 'orange' : 'red'
+                                            }`}>
+                                            {rec.status}
+                                        </span>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
             </div>
         </div>
     );
