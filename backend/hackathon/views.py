@@ -393,3 +393,179 @@ class OnboardingListView(View):
             })
 
         return JsonResponse({'onboarding': data})
+
+
+class JobHistoryListView(View):
+    def get(self, request: HttpRequest) -> JsonResponse:
+        employees = EmpMaster.objects.all()
+        data = []
+        for emp in employees:
+            ctc_records = EmpCtcInfo.objects.filter(emp=emp).order_by('start_of_ctc')
+            prev_title = None
+            for ctc in ctc_records:
+                change_type = 'Initial' if prev_title is None else 'Promotion'
+                data.append({
+                    'emp_id': emp.emp_id,
+                    'employee': f"{emp.first_name} {emp.last_name}",
+                    'previous_role': prev_title or '—',
+                    'new_role': ctc.ext_title,
+                    'level': f"L{ctc.main_level}{ctc.sub_level}",
+                    'effective_date': str(ctc.start_of_ctc),
+                    'end_date': str(ctc.end_of_ctc) if ctc.end_of_ctc else 'Current',
+                    'ctc': ctc.ctc_amt,
+                    'type': change_type,
+                })
+                prev_title = ctc.ext_title
+
+        # Sort by effective_date descending (most recent first)
+        data.sort(key=lambda x: x['effective_date'], reverse=True)
+        return JsonResponse({'job_history': data})
+
+
+class ExitWorkflowListView(View):
+    def get(self, request: HttpRequest) -> JsonResponse:
+        from datetime import date
+        today = date.today()
+
+        # Employees with an end_date are in the exit workflow
+        exiting = EmpMaster.objects.exclude(end_date__isnull=True)
+        exit_requests = []
+        completed_exits = []
+
+        for emp in exiting:
+            # Get role from emp_ctc_info
+            ctc = EmpCtcInfo.objects.filter(emp=emp, end_of_ctc__isnull=True).order_by('-start_of_ctc').first()
+            if not ctc:
+                ctc = EmpCtcInfo.objects.filter(emp=emp).order_by('-start_of_ctc').first()
+            role = ctc.ext_title if ctc else 'N/A'
+
+            # Check clearance via compliance records
+            compliance = EmpComplianceTracker.objects.filter(emp=emp)
+            total = compliance.count()
+            verified = compliance.filter(status__in=['Verified', 'Completed']).count()
+
+            if emp.end_date >= today:
+                # Still in notice period
+                exit_requests.append({
+                    'emp_id': emp.emp_id,
+                    'employee': f"{emp.first_name} {emp.last_name}",
+                    'role': role,
+                    'resignation_date': str(emp.start_date),
+                    'last_working_day': str(emp.end_date),
+                    'status': 'Notice Period',
+                })
+            else:
+                # Already exited
+                clearance = 'Cleared' if (total > 0 and verified == total) else 'Pending'
+                completed_exits.append({
+                    'emp_id': emp.emp_id,
+                    'employee': f"{emp.first_name} {emp.last_name}",
+                    'role': role,
+                    'last_working_day': str(emp.end_date),
+                    'clearance_status': clearance,
+                })
+
+        return JsonResponse({
+            'exit_requests': exit_requests,
+            'completed_exits': completed_exits,
+        })
+
+
+class ReportsView(View):
+    """Live stats for the Reports & Analytics page."""
+    def get(self, request: HttpRequest) -> JsonResponse:
+        from datetime import date
+        total = EmpMaster.objects.count()
+        exited = EmpMaster.objects.exclude(end_date__isnull=True).count()
+        attrition = round((exited / total * 100), 1) if total > 0 else 0
+        active = total - exited
+        today = date.today().isoformat()
+        return JsonResponse({
+            'total_headcount': total,
+            'active_employees': active,
+            'exited_employees': exited,
+            'attrition_rate': attrition,
+            'reports': [
+                {'name': 'Headcount Report', 'description': 'Breakdown by Level & Role', 'slug': 'headcount', 'last_generated': today},
+                {'name': 'Joiners & Leavers', 'description': 'Monthly movement tracking', 'slug': 'joiners-leavers', 'last_generated': today},
+                {'name': 'CTC Distribution', 'description': 'Salary band analysis', 'slug': 'ctc', 'last_generated': today},
+                {'name': 'Compliance Status', 'description': 'Audit ready compliance report', 'slug': 'compliance', 'last_generated': today},
+            ],
+        })
+
+
+class ReportDownloadView(View):
+    """Generate CSV reports from live database data."""
+    def get(self, request: HttpRequest, slug: str) -> JsonResponse:
+        import csv
+        from django.http import HttpResponse as DjangoHttpResponse
+
+        if slug == 'headcount':
+            response = DjangoHttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = 'attachment; filename="headcount_report.csv"'
+            writer = csv.writer(response)
+            writer.writerow(['Emp ID', 'First Name', 'Last Name', 'Role', 'Level', 'Start Date', 'End Date', 'Status'])
+            for emp in EmpMaster.objects.all():
+                ctc = EmpCtcInfo.objects.filter(emp=emp, end_of_ctc__isnull=True).order_by('-start_of_ctc').first()
+                role = ctc.ext_title if ctc else 'N/A'
+                level = f"L{ctc.main_level}{ctc.sub_level}" if ctc else 'N/A'
+                status = 'Active' if emp.end_date is None else 'Exited'
+                writer.writerow([emp.emp_id, emp.first_name, emp.last_name, role, level, emp.start_date, emp.end_date or '', status])
+            return response
+
+        elif slug == 'joiners-leavers':
+            response = DjangoHttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = 'attachment; filename="joiners_leavers_report.csv"'
+            writer = csv.writer(response)
+            writer.writerow(['Emp ID', 'Name', 'Type', 'Date'])
+            for emp in EmpMaster.objects.all().order_by('-start_date'):
+                writer.writerow([emp.emp_id, f"{emp.first_name} {emp.last_name}", 'Joiner', emp.start_date])
+            for emp in EmpMaster.objects.exclude(end_date__isnull=True).order_by('-end_date'):
+                writer.writerow([emp.emp_id, f"{emp.first_name} {emp.last_name}", 'Leaver', emp.end_date])
+            return response
+
+        elif slug == 'ctc':
+            response = DjangoHttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = 'attachment; filename="ctc_distribution_report.csv"'
+            writer = csv.writer(response)
+            writer.writerow(['Emp ID', 'Name', 'Role', 'Level', 'CTC Amount', 'Start Date', 'End Date'])
+            for ctc in EmpCtcInfo.objects.select_related('emp').all().order_by('-ctc_amt'):
+                writer.writerow([ctc.emp_id, f"{ctc.emp.first_name} {ctc.emp.last_name}", ctc.ext_title,
+                                 f"L{ctc.main_level}{ctc.sub_level}", ctc.ctc_amt, ctc.start_of_ctc, ctc.end_of_ctc or 'Current'])
+            return response
+
+        elif slug == 'compliance':
+            response = DjangoHttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = 'attachment; filename="compliance_status_report.csv"'
+            writer = csv.writer(response)
+            writer.writerow(['Emp ID', 'Name', 'Compliance Type', 'Status', 'Document URL'])
+            for c in EmpComplianceTracker.objects.select_related('emp').all():
+                writer.writerow([c.emp_id, f"{c.emp.first_name} {c.emp.last_name}", c.comp_type, c.status, c.doc_url or ''])
+            return response
+
+        else:
+            return JsonResponse({'error': f'Unknown report: {slug}'}, status=404)
+
+
+class InitiateExitView(View):
+    """Set end_date on an employee to initiate exit."""
+    def post(self, request: HttpRequest) -> JsonResponse:
+        payload = _json_body(request)
+        emp_id = payload.get('emp_id')
+        end_date_str = payload.get('end_date')
+
+        if not emp_id or not end_date_str:
+            return JsonResponse({'error': 'emp_id and end_date are required.'}, status=400)
+
+        end_date = parse_date(end_date_str)
+        if not end_date:
+            return JsonResponse({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=400)
+
+        try:
+            emp = EmpMaster.objects.get(emp_id=emp_id)
+        except EmpMaster.DoesNotExist:
+            return JsonResponse({'error': f'Employee {emp_id} not found.'}, status=404)
+
+        emp.end_date = end_date
+        emp.save()
+        return JsonResponse({'ok': True, 'message': f'Exit initiated for {emp.first_name} {emp.last_name}. Last working day: {end_date}'})

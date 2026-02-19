@@ -3,7 +3,9 @@ from django.urls import path
 from .views import (
     ApiForgotPasswordView, ApiLoginView, ApiLogoutView, ApiMeView, 
     ApiOtpRequestView, ApiOtpVerifyView, ApiRegisterView, HealthView,
-    EmployeeListView, ComplianceListView, ApiAddEmployeeView, OnboardingListView
+    EmployeeListView, ComplianceListView, ApiAddEmployeeView, OnboardingListView,
+    JobHistoryListView, ExitWorkflowListView, ReportsView, ReportDownloadView,
+    InitiateExitView
 )
 
 urlpatterns = [
@@ -15,9 +17,14 @@ urlpatterns = [
     path('api/otp/verify', ApiOtpVerifyView.as_view(), name='api_otp_verify'),
     path('api/home', ApiMeView.as_view(), name='api_home'),
     path('api/logout', ApiLogoutView.as_view(), name='api_logout'),
-    # New endpoints for data access
+    # Data endpoints
     path('api/employees', EmployeeListView.as_view(), name='employee_list'),
     path('api/employees/add', ApiAddEmployeeView.as_view(), name='employee_add'),
     path('api/compliance', ComplianceListView.as_view(), name='compliance_list'),
     path('api/onboarding', OnboardingListView.as_view(), name='onboarding_list'),
+    path('api/job-history', JobHistoryListView.as_view(), name='job_history_list'),
+    path('api/exit-workflow', ExitWorkflowListView.as_view(), name='exit_workflow_list'),
+    path('api/reports', ReportsView.as_view(), name='reports'),
+    path('api/reports/download/<str:slug>', ReportDownloadView.as_view(), name='report_download'),
+    path('api/initiate-exit', InitiateExitView.as_view(), name='initiate_exit'),
 ]
