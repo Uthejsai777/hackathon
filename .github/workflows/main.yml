@@ -64,7 +64,7 @@ jobs:
 
           python manage.py migrate
           python manage.py collectstatic --noinput
-
+          sudo systemctl start team12-backend.service
           sudo systemctl restart team12-backend.service
           sudo systemctl status team12-backend.service --no-pager
         EOF
