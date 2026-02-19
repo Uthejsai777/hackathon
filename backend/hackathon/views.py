@@ -356,32 +356,36 @@ class ApiAddEmployeeView(View):
 
 class OnboardingListView(View):
     def get(self, request: HttpRequest) -> JsonResponse:
-        employees = EmpMaster.objects.all()
+        employees = list(EmpMaster.objects.all())
+        # Bulk-fetch all CTC and compliance records (2 queries instead of 2*N)
+        all_ctc = list(EmpCtcInfo.objects.all().order_by('-start_of_ctc'))
+        all_compliance = list(EmpComplianceTracker.objects.all())
+
+        # Build lookup dicts
+        ctc_by_emp = {}
+        for c in all_ctc:
+            ctc_by_emp.setdefault(c.emp_id, []).append(c)
+        comp_by_emp = {}
+        for c in all_compliance:
+            comp_by_emp.setdefault(c.emp_id, []).append(c)
+
         data = []
         for emp in employees:
-            # Get role from emp_ctc_info (latest active title)
-            ctc = EmpCtcInfo.objects.filter(emp=emp, end_of_ctc__isnull=True).order_by('-start_of_ctc').first()
-            if not ctc:
-                ctc = EmpCtcInfo.objects.filter(emp=emp).order_by('-start_of_ctc').first()
+            ctc_list = ctc_by_emp.get(emp.emp_id, [])
+            # Pick active (no end_of_ctc) or latest
+            ctc = next((c for c in ctc_list if c.end_of_ctc is None), ctc_list[0] if ctc_list else None)
             role = ctc.ext_title if ctc else 'N/A'
 
-            # Derive onboarding status from compliance records
-            compliance_records = EmpComplianceTracker.objects.filter(emp=emp)
-            total = compliance_records.count()
-            verified = compliance_records.filter(status__in=['Verified', 'Completed']).count()
+            records = comp_by_emp.get(emp.emp_id, [])
+            total = len(records)
+            verified = sum(1 for r in records if r.status in ('Verified', 'Completed'))
 
             if total == 0:
-                status = 'Not Started'
-                docs_done = 0
-                docs_total = 0
+                status, docs_done, docs_total = 'Not Started', 0, 0
             elif verified == total:
-                status = 'Completed'
-                docs_done = verified
-                docs_total = total
+                status, docs_done, docs_total = 'Completed', verified, total
             else:
-                status = 'In Progress'
-                docs_done = verified
-                docs_total = total
+                status, docs_done, docs_total = 'In Progress', verified, total
 
             data.append({
                 'emp_id': emp.emp_id,
@@ -397,16 +401,26 @@ class OnboardingListView(View):
 
 class JobHistoryListView(View):
     def get(self, request: HttpRequest) -> JsonResponse:
-        employees = EmpMaster.objects.all()
+        employees = {e.emp_id: e for e in EmpMaster.objects.all()}
+        # Single query for all CTC records
+        all_ctc = list(EmpCtcInfo.objects.all().order_by('emp_id', 'start_of_ctc'))
+
+        ctc_by_emp = {}
+        for c in all_ctc:
+            ctc_by_emp.setdefault(c.emp_id, []).append(c)
+
         data = []
-        for emp in employees:
-            ctc_records = EmpCtcInfo.objects.filter(emp=emp).order_by('start_of_ctc')
+        for emp_id, ctc_list in ctc_by_emp.items():
+            emp = employees.get(emp_id)
+            if not emp:
+                continue
+            name = f"{emp.first_name} {emp.last_name}"
             prev_title = None
-            for ctc in ctc_records:
+            for ctc in ctc_list:
                 change_type = 'Initial' if prev_title is None else 'Promotion'
                 data.append({
-                    'emp_id': emp.emp_id,
-                    'employee': f"{emp.first_name} {emp.last_name}",
+                    'emp_id': emp_id,
+                    'employee': name,
                     'previous_role': prev_title or '—',
                     'new_role': ctc.ext_title,
                     'level': f"L{ctc.main_level}{ctc.sub_level}",
@@ -417,7 +431,6 @@ class JobHistoryListView(View):
                 })
                 prev_title = ctc.ext_title
 
-        # Sort by effective_date descending (most recent first)
         data.sort(key=lambda x: x['effective_date'], reverse=True)
         return JsonResponse({'job_history': data})
 
@@ -427,25 +440,35 @@ class ExitWorkflowListView(View):
         from datetime import date
         today = date.today()
 
-        # Employees with an end_date are in the exit workflow
-        exiting = EmpMaster.objects.exclude(end_date__isnull=True)
+        exiting = list(EmpMaster.objects.exclude(end_date__isnull=True))
+        if not exiting:
+            return JsonResponse({'exit_requests': [], 'completed_exits': []})
+
+        emp_ids = [e.emp_id for e in exiting]
+        # Bulk-fetch CTC and compliance for exiting employees only
+        all_ctc = list(EmpCtcInfo.objects.filter(emp_id__in=emp_ids).order_by('-start_of_ctc'))
+        all_comp = list(EmpComplianceTracker.objects.filter(emp_id__in=emp_ids))
+
+        ctc_by_emp = {}
+        for c in all_ctc:
+            ctc_by_emp.setdefault(c.emp_id, []).append(c)
+        comp_by_emp = {}
+        for c in all_comp:
+            comp_by_emp.setdefault(c.emp_id, []).append(c)
+
         exit_requests = []
         completed_exits = []
 
         for emp in exiting:
-            # Get role from emp_ctc_info
-            ctc = EmpCtcInfo.objects.filter(emp=emp, end_of_ctc__isnull=True).order_by('-start_of_ctc').first()
-            if not ctc:
-                ctc = EmpCtcInfo.objects.filter(emp=emp).order_by('-start_of_ctc').first()
+            ctc_list = ctc_by_emp.get(emp.emp_id, [])
+            ctc = next((c for c in ctc_list if c.end_of_ctc is None), ctc_list[0] if ctc_list else None)
             role = ctc.ext_title if ctc else 'N/A'
 
-            # Check clearance via compliance records
-            compliance = EmpComplianceTracker.objects.filter(emp=emp)
-            total = compliance.count()
-            verified = compliance.filter(status__in=['Verified', 'Completed']).count()
+            records = comp_by_emp.get(emp.emp_id, [])
+            total = len(records)
+            verified = sum(1 for r in records if r.status in ('Verified', 'Completed'))
 
             if emp.end_date >= today:
-                # Still in notice period
                 exit_requests.append({
                     'emp_id': emp.emp_id,
                     'employee': f"{emp.first_name} {emp.last_name}",
@@ -455,7 +478,6 @@ class ExitWorkflowListView(View):
                     'status': 'Notice Period',
                 })
             else:
-                # Already exited
                 clearance = 'Cleared' if (total > 0 and verified == total) else 'Pending'
                 completed_exits.append({
                     'emp_id': emp.emp_id,
@@ -505,8 +527,14 @@ class ReportDownloadView(View):
             response['Content-Disposition'] = 'attachment; filename="headcount_report.csv"'
             writer = csv.writer(response)
             writer.writerow(['Emp ID', 'First Name', 'Last Name', 'Role', 'Level', 'Start Date', 'End Date', 'Status'])
-            for emp in EmpMaster.objects.all():
-                ctc = EmpCtcInfo.objects.filter(emp=emp, end_of_ctc__isnull=True).order_by('-start_of_ctc').first()
+            employees = list(EmpMaster.objects.all())
+            all_ctc = list(EmpCtcInfo.objects.all().order_by('-start_of_ctc'))
+            ctc_by_emp = {}
+            for c in all_ctc:
+                ctc_by_emp.setdefault(c.emp_id, []).append(c)
+            for emp in employees:
+                ctc_list = ctc_by_emp.get(emp.emp_id, [])
+                ctc = next((c for c in ctc_list if c.end_of_ctc is None), ctc_list[0] if ctc_list else None)
                 role = ctc.ext_title if ctc else 'N/A'
                 level = f"L{ctc.main_level}{ctc.sub_level}" if ctc else 'N/A'
                 status = 'Active' if emp.end_date is None else 'Exited'
