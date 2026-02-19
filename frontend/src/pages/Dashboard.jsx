@@ -58,6 +58,7 @@ function Dashboard() {
                         <li><NavLink to="/dashboard/exit-workflow" className={({ isActive }) => isActive ? 'active' : ''}>Exit Workflow</NavLink></li>
                         <li><NavLink to="/dashboard/compliance" className={({ isActive }) => isActive ? 'active' : ''}>Compliance</NavLink></li>
                         <li><NavLink to="/dashboard/reports" className={({ isActive }) => isActive ? 'active' : ''}>Reports</NavLink></li>
+                        <li><NavLink to="/dashboard/add-employee" className={({ isActive }) => isActive ? 'active' : ''}>Add Employee</NavLink></li>
                     </ul>
                 </div>
 

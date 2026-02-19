@@ -3,6 +3,7 @@ import re
 
 from django.http import HttpRequest, JsonResponse
 from django.views import View
+from django.utils.dateparse import parse_date
 from .models import EmpMaster, EmpComplianceTracker
 
 from .auth import (
@@ -312,3 +313,42 @@ class ComplianceListView(View):
                 'status': record.status,
             })
         return JsonResponse({'compliance_records': data})
+
+
+class ApiAddEmployeeView(View):
+    def post(self, request: HttpRequest) -> JsonResponse:
+        payload = _json_body(request)
+        first_name = (payload.get('first_name') or '').strip()
+        last_name = (payload.get('last_name') or '').strip()
+        # Default to today if not provided, or ensure required
+        start_date_str = payload.get('start_date')
+        
+        if not first_name or not last_name or not start_date_str:
+             return JsonResponse({'error': 'First Name, Last Name, and Start Date are required.'}, status=400)
+
+        start_date = parse_date(start_date_str)
+        if not start_date:
+            return JsonResponse({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=400)
+
+        # Handle ID generation if DB isn't Auto-Increment
+        # For now, we try to let DB handle it. If it fails, we might need to fetch max ID.
+        # However, typically 'primary_key=True' implies we might want to let DB handle it.
+        # If DB is not auto-increment, we need to manually set it.
+        # Let's try to find the max ID and increment + 1 just in case, or try insert.
+        # To be safe given 'managed=False' and typical legacy DBs:
+        last_emp = EmpMaster.objects.order_by('-emp_id').first()
+        new_id = (last_emp.emp_id + 1) if last_emp else 1
+
+        try:
+            emp = EmpMaster.objects.create(
+                emp_id=new_id, 
+                first_name=first_name,
+                last_name=last_name,
+                start_date=start_date,
+                middle_name=payload.get('middle_name'),
+                end_date=parse_date(payload.get('end_date')) if payload.get('end_date') else None
+            )
+        except Exception as e:
+             return JsonResponse({'error': str(e)}, status=500)
+
+        return JsonResponse({'ok': True, 'message': 'Employee added successfully', 'emp_id': emp.emp_id})

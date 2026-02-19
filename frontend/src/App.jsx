@@ -9,6 +9,7 @@ import JobHistory from './pages/JobHistory.jsx'
 import ExitWorkflow from './pages/ExitWorkflow.jsx'
 import Compliance from './pages/Compliance.jsx'
 import Reports from './pages/Reports.jsx'
+import AddEmployee from './pages/AddEmployee.jsx'
 
 function App() {
   return (
@@ -37,10 +38,12 @@ function App() {
         <Route path="exit-workflow" element={<ExitWorkflow />} />
         <Route path="compliance" element={<Compliance />} />
         <Route path="reports" element={<Reports />} />
+        <Route path="add-employee" element={<AddEmployee />} />
       </Route>
       <Route path="*" element={<Navigate to="/auth" replace />} />
     </Routes>
   )
 }
+
 
 export default App
