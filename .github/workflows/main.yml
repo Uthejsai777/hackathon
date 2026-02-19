@@ -36,7 +36,7 @@ jobs:
           --exclude='.git' \
           --exclude='node_modules' \
           frontend/dist/ \
-          ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ec2-user/intern-league2/team1/frontend/
+          ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ec2-user/intern-league2/team12/frontend/
 
     # ---------------- DEPLOY BACKEND ----------------
     - name: Deploy Backend to DEV EC2
@@ -46,16 +46,16 @@ jobs:
           --exclude='__pycache__' \
           --exclude='venv' \
           backend/ \
-          ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ec2-user/intern-league2/team1/backend/
+          ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ec2-user/intern-league2/team12/backend/
 
     # ---------------- BACKEND SETUP & RESTART ----------------
     - name: Restart Django Backend Service
       run: |
         ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
-          cd /home/ec2-user/intern-league2/team1/backend
+          cd /home/ec2-user/intern-league2/team12/backend
 
           if [ ! -d "venv" ]; then
-            python3 -m venv venv
+            python3.11 -m venv venv
           fi
 
           source venv/bin/activate
@@ -64,7 +64,7 @@ jobs:
 
           python manage.py migrate
           python manage.py collectstatic --noinput
-
-          sudo systemctl restart team1-backend.service
-          sudo systemctl status team1-backend.service --no-pager
+          sudo systemctl start team12-backend.service
+          sudo systemctl restart team12-backend.service
+          sudo systemctl status team12-backend.service --no-pager
         EOF
