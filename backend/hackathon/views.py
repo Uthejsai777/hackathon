@@ -3,6 +3,7 @@ import re
 
 from django.http import HttpRequest, JsonResponse
 from django.views import View
+from .models import EmpMaster, EmpComplianceTracker
 
 from .auth import (
     ExternalAuthError,
@@ -287,3 +288,27 @@ class ApiOtpVerifyView(View):
                 'user': {'id': None, 'username': email},
             }
         )
+
+
+class EmployeeListView(View):
+    def get(self, request: HttpRequest) -> JsonResponse:
+        # Example: Fetch all employees
+        employees = EmpMaster.objects.all().values(
+            'emp_id', 'first_name', 'last_name', 'start_date'
+        )
+        return JsonResponse({'employees': list(employees)})
+
+
+class ComplianceListView(View):
+    def get(self, request: HttpRequest) -> JsonResponse:
+        # Example: Fetch compliance records with related employee info
+        records = EmpComplianceTracker.objects.select_related('emp').all()
+        data = []
+        for record in records:
+            data.append({
+                'id': record.emp_compliance_tracker_id,
+                'employee': f"{record.emp.first_name} {record.emp.last_name}",
+                'type': record.comp_type,
+                'status': record.status,
+            })
+        return JsonResponse({'compliance_records': data})

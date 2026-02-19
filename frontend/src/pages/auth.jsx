@@ -40,7 +40,7 @@ function AuthPage() {
 
   useEffect(() => {
     if (status === 'ready' && user) {
-      navigate('/home', { replace: true })
+      navigate('/dashboard', { replace: true })
     }
   }, [navigate, status, user])
 
@@ -159,7 +159,7 @@ function AuthPage() {
       } else {
         await signIn({ username, password })
       }
-      navigate('/home')
+      navigate('/dashboard')
     } catch (err) {
       setErrorMessage(err?.message || 'Login failed')
     } finally {

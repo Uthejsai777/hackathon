@@ -1,4 +1,6 @@
-from django.db import models
+import os
+
+content = """from django.db import models
 
 
 class EmpBankInfo(models.Model):
@@ -66,3 +68,13 @@ class EmpRegInfo(models.Model):
     class Meta:
         managed = False
         db_table = 'emp_reg_info'
+"""
+
+file_path = os.path.join('hackathon', 'models.py')
+if os.path.exists(file_path):
+    os.remove(file_path)
+
+with open(file_path, 'w', encoding='utf-8') as f:
+    f.write(content)
+
+print(f"Successfully wrote {file_path} with UTF-8 encoding.")

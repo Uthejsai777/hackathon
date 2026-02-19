@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR Management System</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            background: #f4f6f9;
+            height: 100vh;
+        }
+
+        /* App Header */
+        .app-header {
+            height: 60px;
+            background: #1e293b;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+        }
+
+        .brand {
+            font-size: 20px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+        }
+
+        .user-icon {
+            width: 35px;
+            height: 35px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #cbd5e1;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .user-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #e2e8f0;
+            text-transform: capitalize;
+        }
+
+        /* Layout Wrapper */
+        .layout-wrapper {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+
+        .sidebar {
+            width: 250px;
+            background: #1e293b;
+            color: white;
+            padding: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* .sidebar h2 removed */
+
+        .sidebar ul {
+            list-style: none;
+        }
+
+        .sidebar ul li {
+            margin: 15px 0;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 6px;
+            transition: 0.3s;
+        }
+
+        .sidebar ul li:hover {
+            background: #334155;
+        }
+
+        /* Main */
+
+        .main {
+            flex: 1;
+            padding: 25px;
+            overflow-y: auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .header h1 {
+            font-size: 22px;
+            color: #1e293b;
+        }
+
+        .card-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .card h3 {
+            margin-bottom: 10px;
+            font-size: 16px;
+            color: #334155;
+        }
+
+        .card p {
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        /* Tables */
+
+        .table-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+            margin-bottom: 30px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 14px;
+        }
+
+        th {
+            background: #f1f5f9;
+            color: #334155;
+        }
+
+        .status {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .green {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .orange {
+            background: #ffedd5;
+            color: #9a3412;
+        }
+
+        .red {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* Buttons */
+
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 6px;
+            background: #2563eb;
+            color: white;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .btn:hover {
+            background: #1d4ed8;
+        }
+
+        /* Top Bar styles removed */
+
+        /* Responsive */
+
+        @media(max-width:768px) {
+            .sidebar {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="app-header">
+        <div class="brand">HRMS Panel</div>
+        <div class="user-profile">
+            <div class="user-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                    stroke="currentColor" style="width:20px;height:20px;">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                </svg>
+            </div>
+            <span class="user-name">uthej</span>
+        </div>
+    </div>
+
+    <div class="layout-wrapper">
+        <div class="sidebar">
+            <ul>
+                <li>Dashboard</li>
+                <li>Onboarding</li>
+                <li>Job History</li>
+                <li>Exit Workflow</li>
+                <li>Compliance</li>
+                <li>Reports</li>
+            </ul>
+        </div>
+
+        <div class="main">
+
+            <div class="header">
+                <h1>HR Dashboard</h1>
+                <button class="btn">Add Employee</button>
+            </div>
+
+            <!-- Top Cards -->
+
+            <div class="card-container">
+                <div class="card">
+                    <h3>Total Headcount</h3>
+                    <p>245 Employees</p>
+                </div>
+
+                <div class="card">
+                    <h3>Pending Verifications</h3>
+                    <p>12 Documents</p>
+                </div>
+
+                <div class="card">
+                    <h3>Expiring in 30 Days</h3>
+                    <p>7 Documents</p>
+                </div>
+
+                <div class="card">
+                    <h3>This Month Joiners</h3>
+                    <p>9 Employees</p>
+                </div>
+            </div>
+
+            <!-- Onboarding Table -->
+
+            <div class="table-container">
+                <h3>Onboarding Checklist</h3>
+                <table>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Role</th>
+                        <th>Checklist Status</th>
+                        <th>Docs Uploaded</th>
+                    </tr>
+                    <tr>
+                        <td>Rahul Kumar</td>
+                        <td>Software Engineer</td>
+                        <td><span class="status orange">In Progress</span></td>
+                        <td>4 / 6</td>
+                    </tr>
+                    <tr>
+                        <td>Anita Sharma</td>
+                        <td>HR Executive</td>
+                        <td><span class="status green">Completed</span></td>
+                        <td>6 / 6</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Compliance Dashboard -->
+
+            <div class="table-container">
+                <h3>Compliance & Document Status</h3>
+                <table>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Document Type</th>
+                        <th>Status</th>
+                        <th>Expiry Date</th>
+                    </tr>
+                    <tr>
+                        <td>Rahul Kumar</td>
+                        <td>ID Proof</td>
+                        <td><span class="status green">Verified</span></td>
+                        <td>--</td>
+                    </tr>
+                    <tr>
+                        <td>Vikram Singh</td>
+                        <td>Work Permit</td>
+                        <td><span class="status red">Expiring Soon</span></td>
+                        <td>15 March 2026</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Reports Section -->
+
+            <div class="table-container">
+                <h3>Reports Overview</h3>
+                <table>
+                    <tr>
+                        <th>Report Name</th>
+                        <th>Description</th>
+                        <th>Action</th>
+                    </tr>
+                    <tr>
+                        <td>Headcount Report</td>
+                        <td>Department / Location / Employment Type</td>
+                        <td><button class="btn">View</button></td>
+                    </tr>
+                    <tr>
+                        <td>Joiners & Leavers</td>
+                        <td>Monthly Tracking</td>
+                        <td><button class="btn">View</button></td>
+                    </tr>
+                    <tr>
+                        <td>CTC Distribution</td>
+                        <td>Salary Level Analysis</td>
+                        <td><button class="btn">View</button></td>
+                    </tr>
+                    <tr>
+                        <td>Compliance Status</td>
+                        <td>By Type / Status</td>
+                        <td><button class="btn">View</button></td>
+                    </tr>
+                </table>
+            </div>
+
+        </div>
+
+    </div>
+</body>
+
+</html>

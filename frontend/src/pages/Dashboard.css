@@ -1,0 +1,388 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.dashboard-body {
+    display: flex;
+    flex-direction: column;
+    background: white;
+    height: 100vh;
+    /* Fixed height to prevent window scroll */
+    width: 100%;
+    overflow: hidden;
+    /* Ensure inner scrollbars are used */
+}
+
+/* App Header */
+.app-header {
+    height: 60px;
+    background: linear-gradient(230deg, #2659BF 19%, #3377ff 100%);
+    color: rgb(255, 255, 255);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+    border-bottom: 1px solid #000000;
+
+}
+
+.brand {
+    font-size: 20px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.menu-toggle {
+    display: none;
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    margin-right: 15px;
+    padding: 5px;
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.user-icon {
+    width: 35px;
+    height: 35px;
+    border: 1px solid rgba(51, 50, 50, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #2e2d2d;
+    background: rgba(7, 7, 7, 0.1);
+}
+
+.user-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #e2e8f0;
+    text-transform: capitalize;
+}
+
+.user-profile {
+    position: relative;
+    /* For dropdown positioning */
+}
+
+.user-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 10px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    min-width: 150px;
+    z-index: 50;
+    overflow: hidden;
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dropdown-item {
+    display: block;
+    width: 100%;
+    padding: 10px 16px;
+    text-align: left;
+    background: none;
+    border: none;
+    font-size: 14px;
+    color: #334155;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.dropdown-item:hover {
+    background-color: #3377ff;
+}
+
+.dropdown-item.text-red {
+    color: #ef4444;
+}
+
+.dropdown-item.text-red:hover {
+    background-color: #fef2f2;
+}
+
+/* Layout Wrapper */
+.layout-wrapper {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Sidebar */
+
+.sidebar {
+    width: 200px;
+    background: linear-gradient(250deg, #3377ff 35%, #e3edff 100%);
+    color: white;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid grey;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Sidebar Links */
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar ul li {
+    margin: 5px 0;
+}
+
+.sidebar ul li a {
+    display: block;
+    padding: 12px 15px;
+    color: #cbd5e1;
+    text-decoration: none;
+    border-radius: 6px;
+    transition: all 0.3s;
+    font-size: 14px;
+}
+
+.sidebar ul li a:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e3edff;
+}
+
+.sidebar ul li a.active {
+    background: #2659BF;
+    color: white;
+    font-weight: 600;
+}
+
+/* .sidebar h2 removed */
+
+/* Main */
+
+/* Main */
+
+.main {
+    flex: 1;
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-y: auto;
+    /* Restored scrolling */
+}
+
+.dashboard-content {
+    width: 100%;
+    max-width: 1200px;
+    /* Limits width for better readability */
+}
+
+.header {
+    display: flex;
+    justify-content: center;
+    /* Center the content (H1) */
+    align-items: center;
+    margin-bottom: 25px;
+    position: relative;
+    /* Context for absolute positioning of button */
+}
+
+.header h1 {
+    font-size: 22px;
+    color: #1e293b;
+    text-align: center;
+}
+
+.header .btn {
+    position: absolute;
+    right: 0;
+    /* Pin button to the right */
+}
+
+.card-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    /* Force 2 columns (Top 2, Bottom 2) */
+    gap: 30px;
+    /* Increased gap */
+    margin-bottom: 30px;
+}
+
+.card {
+    background: linear-gradient(350deg, #e3edff 0%, #3377ff 100%);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(51, 119, 255, 0.25);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+}
+
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px rgba(51, 119, 255, 0.4);
+}
+
+.card h3 {
+    margin-bottom: 10px;
+    font-size: 16px;
+    color: #ffffff;
+}
+
+.card p {
+    font-size: 14px;
+    color: #000000;
+}
+
+/* Tables */
+
+.table-container {
+    background: linear-gradient(350deg, #e3edff 0%, #3377ff 100%);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(51, 119, 255, 0.25);
+    margin-bottom: 30px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.table-container:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px rgba(51, 119, 255, 0.4);
+}
+
+.table-container h3 {
+    color: white;
+    margin-bottom: 15px;
+    font-size: 16px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+th,
+td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 14px;
+    color: white;
+}
+
+th {
+    background: #e3edff;
+    /* New secondary color */
+    color: #3377ff;
+    /* New primary color for text */
+    font-weight: 600;
+}
+
+.status {
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.green {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.orange {
+    background: #ffedd5;
+    color: #9a3412;
+}
+
+.red {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* Buttons */
+
+/* Buttons */
+
+.btn {
+    padding: 8px 15px;
+    border: none;
+    border-radius: 6px;
+    background: #3377ff;
+    /* New primary color */
+    color: white;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.2s;
+}
+
+.btn:hover {
+    background: #2659bf;
+    /* New primary-dark color */
+}
+
+/* Responsive */
+
+@media(max-width:768px) {
+    .menu-toggle {
+        display: block;
+    }
+
+    .sidebar {
+        /* display: none; Removed */
+        position: fixed;
+        left: -250px;
+        /* Hide off-screen */
+        top: 60px;
+        height: calc(100vh - 60px);
+        width: 250px;
+        z-index: 100;
+        transition: left 0.3s ease-in-out;
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .sidebar.open {
+        left: 0;
+    }
+
+    .sidebar-overlay {
+        position: fixed;
+        top: 60px;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 90;
+    }
+
+    .card-container {
+        grid-template-columns: 1fr;
+        /* Stack cards on mobile */
+    }
+}

@@ -1,6 +1,10 @@
 from django.urls import path
 
-from .views import ApiForgotPasswordView, ApiLoginView, ApiLogoutView, ApiMeView, ApiOtpRequestView, ApiOtpVerifyView, ApiRegisterView, HealthView
+from .views import (
+    ApiForgotPasswordView, ApiLoginView, ApiLogoutView, ApiMeView, 
+    ApiOtpRequestView, ApiOtpVerifyView, ApiRegisterView, HealthView,
+    EmployeeListView, ComplianceListView
+)
 
 urlpatterns = [
     path('', HealthView.as_view(), name='health'),
@@ -11,4 +15,7 @@ urlpatterns = [
     path('api/otp/verify', ApiOtpVerifyView.as_view(), name='api_otp_verify'),
     path('api/home', ApiMeView.as_view(), name='api_home'),
     path('api/logout', ApiLogoutView.as_view(), name='api_logout'),
+    # New endpoints for data access
+    path('api/employees', EmployeeListView.as_view(), name='employee_list'),
+    path('api/compliance', ComplianceListView.as_view(), name='compliance_list'),
 ]
