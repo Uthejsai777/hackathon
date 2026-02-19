@@ -3,7 +3,7 @@ from django.urls import path
 from .views import (
     ApiForgotPasswordView, ApiLoginView, ApiLogoutView, ApiMeView, 
     ApiOtpRequestView, ApiOtpVerifyView, ApiRegisterView, HealthView,
-    EmployeeListView, ComplianceListView, ApiAddEmployeeView
+    EmployeeListView, ComplianceListView, ApiAddEmployeeView, OnboardingListView
 )
 
 urlpatterns = [
@@ -19,4 +19,5 @@ urlpatterns = [
     path('api/employees', EmployeeListView.as_view(), name='employee_list'),
     path('api/employees/add', ApiAddEmployeeView.as_view(), name='employee_add'),
     path('api/compliance', ComplianceListView.as_view(), name='compliance_list'),
+    path('api/onboarding', OnboardingListView.as_view(), name='onboarding_list'),
 ]

@@ -4,7 +4,7 @@ import re
 from django.http import HttpRequest, JsonResponse
 from django.views import View
 from django.utils.dateparse import parse_date
-from .models import EmpMaster, EmpComplianceTracker
+from .models import EmpMaster, EmpComplianceTracker, EmpCtcInfo
 
 from .auth import (
     ExternalAuthError,
@@ -352,3 +352,44 @@ class ApiAddEmployeeView(View):
              return JsonResponse({'error': str(e)}, status=500)
 
         return JsonResponse({'ok': True, 'message': 'Employee added successfully', 'emp_id': emp.emp_id})
+
+
+class OnboardingListView(View):
+    def get(self, request: HttpRequest) -> JsonResponse:
+        employees = EmpMaster.objects.all()
+        data = []
+        for emp in employees:
+            # Get role from emp_ctc_info (latest active title)
+            ctc = EmpCtcInfo.objects.filter(emp=emp, end_of_ctc__isnull=True).order_by('-start_of_ctc').first()
+            if not ctc:
+                ctc = EmpCtcInfo.objects.filter(emp=emp).order_by('-start_of_ctc').first()
+            role = ctc.ext_title if ctc else 'N/A'
+
+            # Derive onboarding status from compliance records
+            compliance_records = EmpComplianceTracker.objects.filter(emp=emp)
+            total = compliance_records.count()
+            verified = compliance_records.filter(status__in=['Verified', 'Completed']).count()
+
+            if total == 0:
+                status = 'Not Started'
+                docs_done = 0
+                docs_total = 0
+            elif verified == total:
+                status = 'Completed'
+                docs_done = verified
+                docs_total = total
+            else:
+                status = 'In Progress'
+                docs_done = verified
+                docs_total = total
+
+            data.append({
+                'emp_id': emp.emp_id,
+                'employee': f"{emp.first_name} {emp.last_name}",
+                'role': role,
+                'date_of_joining': str(emp.start_date),
+                'status': status,
+                'docs_uploaded': f"{docs_done} / {docs_total}",
+            })
+
+        return JsonResponse({'onboarding': data})

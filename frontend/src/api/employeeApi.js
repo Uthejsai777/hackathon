@@ -21,3 +21,10 @@ export function apiGetCompliance({ token }) {
         token,
     })
 }
+
+export function apiGetOnboarding({ token }) {
+    return httpJson('/api/onboarding', {
+        method: 'GET',
+        token,
+    })
+}
