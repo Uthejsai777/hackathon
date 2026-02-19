@@ -1,15 +1,86 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './Dashboard.css';
 import { useAuth } from '../auth/AuthContext';
 import { Outlet, NavLink } from 'react-router-dom';
+
+const IDLE_TIMEOUT_MS = 600000;  // 10 minutes of inactivity
+const FADE_DURATION_MS = 1500;   // 1.5-second fade-out
 
 function Dashboard() {
     const { user, signOut } = useAuth();
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [isFading, setIsFading] = useState(false);
+
+    const idleTimer = useRef(null);
+    const fadeTimer = useRef(null);
+
+    // ── Idle timeout logic ──────────────────────────────────
+    // Resets the idle timer whenever the user interacts with the page.
+    // After IDLE_TIMEOUT_MS of no interaction, starts a fade-out.
+    // After the fade completes, calls signOut() to log the user out.
+    const resetIdleTimer = useCallback(() => {
+        // Cancel any pending timers
+        if (idleTimer.current) clearTimeout(idleTimer.current);
+        if (fadeTimer.current) clearTimeout(fadeTimer.current);
+
+        // If we were fading, cancel it
+        setIsFading(false);
+
+        // Start a new idle countdown
+        idleTimer.current = setTimeout(() => {
+            // No interaction for 10 seconds → begin fade-out
+            setIsFading(true);
+
+            // After fade animation completes → log out
+            fadeTimer.current = setTimeout(() => {
+                signOut();
+            }, FADE_DURATION_MS);
+        }, IDLE_TIMEOUT_MS);
+    }, [signOut]);
+
+    useEffect(() => {
+        // Events that count as "user activity"
+        const activityEvents = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+
+        const handleActivity = () => resetIdleTimer();
+
+        // Attach listeners
+        activityEvents.forEach(evt => window.addEventListener(evt, handleActivity));
+
+        // Start initial timer
+        resetIdleTimer();
+
+        return () => {
+            // Cleanup on unmount
+            activityEvents.forEach(evt => window.removeEventListener(evt, handleActivity));
+            if (idleTimer.current) clearTimeout(idleTimer.current);
+            if (fadeTimer.current) clearTimeout(fadeTimer.current);
+        };
+    }, [resetIdleTimer]);
+    // ────────────────────────────────────────────────────────
 
     return (
-        <div className="dashboard-body" onClick={() => setIsDropdownOpen(false)}> {/* Close on background click */}
+        <div
+            className="dashboard-body"
+            onClick={() => setIsDropdownOpen(false)}
+            style={{
+                opacity: isFading ? 0 : 1,
+                transition: isFading ? `opacity ${FADE_DURATION_MS}ms ease` : 'opacity 0.15s ease',
+            }}
+        >
+            {/* Idle warning overlay */}
+            {isFading && (
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: 9999,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'rgba(0,0,0,0.45)', color: '#fff', fontSize: 22, fontWeight: 600,
+                    pointerEvents: 'all',
+                }}>
+                    Session expiring due to inactivity...
+                </div>
+            )}
+
             <div className="app-header">
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                     <button className="menu-toggle" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
